@@ -1,0 +1,33 @@
+name: Windows EXE
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack source
+        shell: pwsh
+        run: Expand-Archive VL-MIC-HOST-Windows-build-kit.zip -DestinationPath source
+      - name: Fetch JUCE 8.0.6
+        shell: pwsh
+        working-directory: source/VL-MIC-HOST-Windows-source
+        run: |
+          git clone --depth 1 --branch 8.0.6 https://github.com/juce-framework/JUCE.git JUCE
+          if ($LASTEXITCODE -ne 0) { throw "JUCE download failed" }
+          Remove-Item JUCE/.git -Recurse -Force
+      - name: Build and package
+        shell: pwsh
+        run: ./source/VL-MIC-HOST-Windows-source/Packaging/build-windows.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VL-MIC-HOST-Windows-x64
+          path: |
+            source/VL-MIC-HOST-Windows-source/dist/*
+            source/VL-MIC-HOST-Windows-source/smoke-test.txt
+          if-no-files-found: error
